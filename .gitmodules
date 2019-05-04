@@ -1,0 +1,3 @@
+[submodule "leela-one-playout"]
+	path = leela-one-playout
+	url = https://github.com/hauensteina/leela-one-playout.git
