@@ -84,6 +84,7 @@ public:
     void virtual_loss_undo();
     void update(float eval);
     float get_eval_lcb(int color) const;
+    void ahn_add_noise( Network::Netresult& netres);
 
     // Defined in UCTNodeRoot.cpp, only to be called on m_root in UCTSearch
     void randomize_first_proportionally();

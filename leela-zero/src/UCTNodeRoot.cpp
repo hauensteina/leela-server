@@ -118,6 +118,13 @@ void UCTNode::dirichlet_noise(float epsilon, float alpha) {
         v /= sample_sum;
     }
 
+    // std::cout << ">>>>>> policy before noise\n";
+    // for (auto& child : m_children) {
+    //     auto policy = child->get_policy();
+    //     std::cout << policy << ", ";
+    // }
+    // std::cout << "\n";
+
     child_cnt = 0;
     for (auto& child : m_children) {
         auto policy = child->get_policy();
@@ -125,6 +132,13 @@ void UCTNode::dirichlet_noise(float epsilon, float alpha) {
         policy = policy * (1 - epsilon) + epsilon * eta_a;
         child->set_policy(policy);
     }
+
+    // std::cout << ">>>>>> policy after noise\n";
+    // for (auto& child : m_children) {
+    //     auto policy = child->get_policy();
+    //     std::cout << policy << ", ";
+    // }
+    // std::cout << "\n";
 }
 
 void UCTNode::randomize_first_proportionally() {

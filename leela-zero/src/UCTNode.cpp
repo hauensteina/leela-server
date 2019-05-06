@@ -38,6 +38,7 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <random>
 #include <utility>
 #include <vector>
 
@@ -48,6 +49,8 @@
 #include "GameState.h"
 #include "Network.h"
 #include "Utils.h"
+#include "Random.h"
+
 
 using namespace Utils;
 
@@ -57,6 +60,83 @@ UCTNode::UCTNode(int vertex, float policy) : m_move(vertex), m_policy(policy) {
 bool UCTNode::first_visit() const {
     return m_visits == 0;
 }
+
+// Draw a slot from a pdf (an array of floats summing to 1).
+// Anything less than alpha * max gets zeroed out.
+//----------------------------------------------------------
+int draw_slot( std::array<float,361> pdf, float alpha) {
+  // Get the probs closer together
+  auto all = std::vector<float>{};
+  for (unsigned i=0; i < pdf.size(); i++) {
+    all.push_back( pow( pdf[i], 0.33));
+  }
+  auto mmax = *std::max_element( all.begin(), all.end());
+  // Zero out the bad ones
+  float ssum = 0.0;
+  for (unsigned i=0; i < all.size(); i++) {
+    if (all[i] < mmax * alpha) {
+      all[i] = 0.0;
+    }
+    else {
+      ssum += all[i];
+    }
+  } // for
+  // Rescale so the sum is 1.0
+  for (unsigned i=0; i < all.size(); i++) {
+    all[i] *= 1.0 / ssum;
+  }
+  // Draw
+  float r = rand() / (float) RAND_MAX;
+  ssum = 0.0;
+  for (unsigned i=0; i < all.size(); i++) {
+    ssum += all[i];
+    if (ssum >= r) {
+      return i;
+    }
+  } // for
+  return  all.size() - 1;
+} // draw_slot()
+
+// Pick any slot from an array where log(arr[i]) > alpha * max.
+//----------------------------------------------------------
+int pick_any( std::array<float,361> pdf, float alpha) {
+  auto all = std::vector<float>{};
+  for (unsigned i=0; i < pdf.size(); i++) {
+    all.push_back( pow( pdf[i], 0.33));
+  }
+  auto mmax = *std::max_element( all.begin(), all.end());
+  // Zero out the bad ones
+  auto good = std::vector<float>{};
+  for (unsigned i=0; i < all.size(); i++) {
+    if (all[i] > mmax * alpha) {
+      good.push_back( i);
+    }
+  } // for
+  // Draw
+  float ridx = rand() % good.size();
+  std::cout << ">>>>>> policy dist:\n";
+  for (auto& p : all) {
+    std::cout << p << ", ";
+  }
+  std::cout << "\n";
+  std::cout << ">>> picked " << good[ridx] << " (idx " << ridx
+            << ") out of " << good.size() << std::endl;
+  return good[ridx];
+} // pick_any()
+
+
+// Swap the best intersection prob with another one that is close.
+//-----------------------------------------------------------------
+void UCTNode::ahn_add_noise( Network::Netresult& netres) {
+  auto &x = netres.policy;
+  auto idx = draw_slot( x, 0.5);
+  //auto idx = pick_any( x, 0.5);
+  int argMax = std::distance( x.begin(), std::max_element(x.begin(), x.end()));
+  auto mmax = x[argMax];
+  std::cout << ">>>>> swapping max " << mmax << " and " << x[idx] << std::endl;
+  x[argMax] = x[idx];
+  x[idx] = mmax;
+} // ahn_add_noise()
 
 bool UCTNode::create_children(Network & network,
                               std::atomic<int>& nodecount,
@@ -79,8 +159,10 @@ bool UCTNode::create_children(Network & network,
         return false;
     }
 
-    const auto raw_netlist = network.get_output(
+    auto raw_netlist = network.get_output(
         &state, Network::Ensemble::RANDOM_SYMMETRY);
+
+    ahn_add_noise( raw_netlist);
 
     // DCNN returns winrate as side to move
     const auto stm_eval = raw_netlist.winrate;
@@ -479,4 +561,3 @@ void UCTNode::wait_expanded() {
 #endif
     assert(v == ExpandState::EXPANDED);
 }
-
