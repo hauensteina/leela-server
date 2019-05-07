@@ -55,7 +55,8 @@ def get_bot_app( bot_map):
             game_state = game_state.apply_move( next_move)
             #print_board( game_state.board)
         bot_agent = bot_map[bot_name]
-        bot_move = bot_agent.select_move( game_state, content['moves'], content.get('config',{}))
+        config = content.get('config',{})
+        bot_move = bot_agent.select_move( game_state, content['moves'], config)
         if bot_move is None or bot_move.is_pass:
             bot_move_str = 'pass'
         elif bot_move.is_resign:
@@ -65,7 +66,8 @@ def get_bot_app( bot_map):
         diag =  bot_agent.diagnostics()
         return jsonify({
             'bot_move': bot_move_str,
-            'diagnostics': diag
+            'diagnostics': diag,
+            'request_id': config.get('request_id','') # echo request_id
         })
 
     return app
