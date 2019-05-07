@@ -138,12 +138,15 @@ class LeelaGTPBot( Agent):
         #print( '--> ' + cmdstr)
 
     # Override Agent.select_move()
-    #-------------------------------------------
-    def select_move( self, game_state, moves):
+    #--------------------------------------------------------
+    def select_move( self, game_state, moves, config = {}):
         global g_response
         global g_response_event
         res = None
         p = self.leela_proc
+
+        randomness = config.get( 'randomness', 0.0)
+
         # Reset the game
         self._leelaCmd( 'clear_board')
 
@@ -155,7 +158,9 @@ class LeelaGTPBot( Agent):
 
         # Ask for new move
         self.last_move_color = color
-        self._leelaCmd( 'genmove ' + color)
+        cmd = 'genmove ' + color + ' ' + str(randomness)
+        self._leelaCmd( cmd)
+        print( 'sending ' + cmd)
         # Hang until the move comes back
         #print( '>>>>>>>>> waiting')
         success = g_response_event.wait( MOVE_TIMEOUT)

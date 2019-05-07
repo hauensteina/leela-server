@@ -40,8 +40,8 @@ def get_bot_app( bot_map):
     #--------------------------------------
     def select_move( bot_name):
         dtstr = datetime.strftime(datetime.now(),'%Y-%m-%d %H:%M:%S')
-        print( '>>> %s select move %s %s' % (dtstr, request.remote_addr, bot_name))
         content = request.json
+        print( '>>> %s select move %s %s' % (dtstr, bot_name, str(content.get('config',{}))))
         board_size = content['board_size']
         game_state = goboard.GameState.new_game( board_size)
         # Replay the game up to this point.
@@ -55,7 +55,7 @@ def get_bot_app( bot_map):
             game_state = game_state.apply_move( next_move)
             #print_board( game_state.board)
         bot_agent = bot_map[bot_name]
-        bot_move = bot_agent.select_move( game_state, content['moves'])
+        bot_move = bot_agent.select_move( game_state, content['moves'], content.get('config',{}))
         if bot_move is None or bot_move.is_pass:
             bot_move_str = 'pass'
         elif bot_move.is_resign:

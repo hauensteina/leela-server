@@ -126,10 +126,10 @@ int pick_any( std::array<float,361> pdf, float alpha) {
 
 
 // Swap the best intersection prob with another one that is close.
-//-----------------------------------------------------------------
-void UCTNode::ahn_add_noise( Network::Netresult& netres) {
+//-----------------------------------------------------------------------
+void UCTNode::ahn_add_noise( Network::Netresult& netres, float alpha) {
   auto &x = netres.policy;
-  auto idx = draw_slot( x, 0.5);
+  auto idx = draw_slot( x, alpha);
   //auto idx = pick_any( x, 0.5);
   int argMax = std::distance( x.begin(), std::max_element(x.begin(), x.end()));
   auto mmax = x[argMax];
@@ -138,11 +138,13 @@ void UCTNode::ahn_add_noise( Network::Netresult& netres) {
   x[idx] = mmax;
 } // ahn_add_noise()
 
+//--------------------------------------------------------------
 bool UCTNode::create_children(Network & network,
                               std::atomic<int>& nodecount,
                               GameState& state,
                               float& eval,
-                              float min_psa_ratio) {
+                              float min_psa_ratio,
+                              float ahn_randomness) {
     // no successors in final state
     if (state.get_passes() >= 2) {
         return false;
@@ -162,7 +164,9 @@ bool UCTNode::create_children(Network & network,
     auto raw_netlist = network.get_output(
         &state, Network::Ensemble::RANDOM_SYMMETRY);
 
-    ahn_add_noise( raw_netlist);
+    if (ahn_randomness != 0.0) {
+      ahn_add_noise( raw_netlist, ahn_randomness);
+    }
 
     // DCNN returns winrate as side to move
     const auto stm_eval = raw_netlist.winrate;

@@ -57,7 +57,8 @@ public:
     bool create_children(Network & network,
                          std::atomic<int>& nodecount,
                          GameState& state, float& eval,
-                         float min_psa_ratio = 0.0f);
+                         float min_psa_ratio = 0.0f,
+			 float ahn_randomness = 0.0f);
 
     const std::vector<UCTNodePointer>& get_children() const;
     void sort_children(int color, float lcb_min_visits);
@@ -84,13 +85,14 @@ public:
     void virtual_loss_undo();
     void update(float eval);
     float get_eval_lcb(int color) const;
-    void ahn_add_noise( Network::Netresult& netres);
+    void ahn_add_noise( Network::Netresult& netres, float alpha);
 
     // Defined in UCTNodeRoot.cpp, only to be called on m_root in UCTSearch
     void randomize_first_proportionally();
     void prepare_root_node(Network & network, int color,
                            std::atomic<int>& nodecount,
-                           GameState& state);
+                           GameState& state,
+			   float ahn_randomness = 0.0);
 
     UCTNode* get_first_child() const;
     UCTNode* get_nopass_child(FastState& state) const;

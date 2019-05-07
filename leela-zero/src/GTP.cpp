@@ -626,6 +626,7 @@ void GTP::execute(GameState & game, const std::string& xinput) {
         cmdstream >> tmp;  // eat genmove
 
         int who;
+        float ahn_randomness = 0.0;
         AnalyzeTags tags;
 
         if (analysis_output) {
@@ -646,6 +647,9 @@ void GTP::execute(GameState & game, const std::string& xinput) {
                 gtp_fail_printf(id, "syntax error");
                 return;
             }
+            float tt;
+            cmdstream >> tt;
+            if (!cmdstream.fail()) { ahn_randomness = tt; }
         }
 
         if (analysis_output) {
@@ -658,7 +662,7 @@ void GTP::execute(GameState & game, const std::string& xinput) {
         {
             game.set_to_move(who);
             // Outputs winrate and pvs for lz-genmove_analyze
-            int move = search->think(who);
+            int move = search->think(who, UCTSearch::NORMAL, ahn_randomness);
             game.play_move(move);
 
             std::string vertex = game.move_to_text(move);

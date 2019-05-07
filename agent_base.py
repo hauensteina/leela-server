@@ -15,8 +15,8 @@ class Agent:
     def __init__(self):
         pass
 
-    #-----------------------------------------------
-    def select_move( self, game_state, moves=None):
+    #-----------------------------------------------------------
+    def select_move( self, game_state, moves=None, config={}):
         raise NotImplementedError()
 
     #---------------------------

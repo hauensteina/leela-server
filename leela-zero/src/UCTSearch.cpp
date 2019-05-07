@@ -744,7 +744,7 @@ void UCTSearch::increment_playouts() {
     m_playouts++;
 }
 
-int UCTSearch::think(int color, passflag_t passflag) {
+int UCTSearch::think(int color, passflag_t passflag, float ahn_randomness) {
     // Start counting time for us
     m_rootstate.start_clock(color);
 
@@ -764,7 +764,7 @@ int UCTSearch::think(int color, passflag_t passflag) {
 
     // create a sorted list of legal moves (make sure we
     // play something legal and decent even in time trouble)
-    m_root->prepare_root_node(m_network, color, m_nodes, m_rootstate);
+    m_root->prepare_root_node(m_network, color, m_nodes, m_rootstate, ahn_randomness);
 
     m_run = true;
     int cpus = cfg_num_threads;
@@ -937,4 +937,3 @@ void UCTSearch::set_visit_limit(int visits) {
     // Limit to type max / 2 to prevent overflow when multithreading.
     m_maxvisits = std::min(visits, UNLIMITED_PLAYOUTS);
 }
-
