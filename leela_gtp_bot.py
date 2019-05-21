@@ -32,7 +32,7 @@ g_handler_lock = Lock()
 g_response_event = Event()
 g_win_prob = ''
 
-MOVE_TIMEOUT = 10 # seconds
+MOVE_TIMEOUT = 20 # seconds
 #===========================
 class LeelaGTPBot( Agent):
     # Listen on a stream in a separate thread until

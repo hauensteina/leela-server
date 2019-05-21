@@ -802,6 +802,7 @@ int UCTSearch::think(int color, passflag_t passflag, float ahn_randomness) {
         keeprunning  = is_running();
         keeprunning &= !stop_thinking(elapsed_centis, time_for_move);
         keeprunning &= have_alternate_moves(elapsed_centis, time_for_move);
+        keeprunning &= (ahn_randomness == 0); // Kroker does only one playout
     } while (keeprunning);
 
     // Make sure to post at least once.
