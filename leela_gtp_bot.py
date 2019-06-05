@@ -30,7 +30,7 @@ from go_utils import point_from_coords
 g_response = None
 g_handler_lock = Lock()
 g_response_event = Event()
-g_win_prob = ''
+g_win_prob = -1
 
 MOVE_TIMEOUT = 20 # seconds
 #===========================
@@ -93,9 +93,13 @@ class LeelaGTPBot( Agent):
         global g_win_prob
         #with self.handler_lock:
         line = leela_response
-        #print( '<-- ' + line)
-        if 'NN eval=' in line:
-            g_win_prob = line.split('=')[1]
+        if g_win_prob < 0 and 'V:' in line:
+            #print( '<-- ' + line)
+            right = line.split('V:')[1]
+            g_win_prob = 0.01 * float(right.split('%')[0])
+        elif 'NN eval=' in line:
+            pass
+            #g_win_prob = line.split('=')[1]
         elif '=' in line:
             resp = line.split('=')[1].strip()
             #print( '<== ' + resp)
@@ -140,9 +144,11 @@ class LeelaGTPBot( Agent):
     # Override Agent.select_move()
     #--------------------------------------------------------
     def select_move( self, game_state, moves, config = {}):
+        global g_win_prob
         global g_response
         global g_response_event
         res = None
+        g_win_prob = -1
         p = self.leela_proc
 
         randomness = config.get( 'randomness', 0.0)
