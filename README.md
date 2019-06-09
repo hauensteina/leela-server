@@ -18,9 +18,9 @@ $ cd leela-server/static/models
 $ aws s3 cp s3://ahn-uploads/leela-server-models/nn_score.hd5 .
 $ aws s3 cp s3://ahn-uploads/leela-server-models/nn_leelabot.hd5 .
  
-To start the back end leela, usei something like
+To start the back end leela, use something like
 
-gunicorn leela_server:app --bind 0.0.0.0:5000 -w 1
+gunicorn leela_server:app --bind 0.0.0.0:2718 -w 1
 
 The GUI needs to know the port. Edit leela-one-playout/static/main.js .
 You can switch between test and production at the very top.
