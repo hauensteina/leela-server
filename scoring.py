@@ -150,12 +150,12 @@ def compute_game_result( game_state):
     )
 
 # Turn nn output into the expected scoring format.
-# Called from server.py
 #----------------------------------------------------
-def compute_nn_game_result( labels, next_player):
+def compute_nn_game_result_prob( labels, next_player):
     mid = 0.5 # Between B and W
     #tol = 0.075 # Closer to 0.5 than tol is dame. Smaller means less dame.
-    tol = 0.15 # Closer to 0.5 than tol is dame. Smaller means less dame.
+    tol = 0.30 # Closer to 0.5 than tol is dame. Smaller means less dame.
+    #tol = 0.15 # Closer to 0.5 than tol is dame. Smaller means less dame.
     labels = labels[0,:]
     n_isecs = len(labels)
     boardsize = int(round(np.sqrt(n_isecs)))
@@ -197,3 +197,45 @@ def compute_nn_game_result( labels, next_player):
                 # territory.num_white_territory,
                 komi=0)
     )
+
+# Turn nn output into the expected scoring format.
+#----------------------------------------------------
+def compute_nn_game_result( labels, next_player):
+    #-----------------------------
+    def color( wprob):
+        NEUTRAL_THRESH = 0.30 # 0.40 0.15
+        if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
+        elif wprob > 0.5: return 'w'
+        else: return 'b'
+
+    white_probs = labels[0,:]
+    TOTAL_POINTS = len(white_probs)
+    BSZ = int(round(np.sqrt(TOTAL_POINTS)))
+    dame = 0
+    wpoints = 0
+    bpoints = 0
+    terrmap = {}
+    for r in range( 1, BSZ+1):
+        for c in range( 1, BSZ+1):
+            p = Point( row=r, col=c)
+            prob_white = white_probs[ (r-1)*BSZ + c - 1]
+            if color( prob_white) == 'w':
+                terrmap[p] = 'territory_w'
+                wpoints += 1
+            elif color( prob_white) == 'b':
+                terrmap[p] = 'territory_b'
+                bpoints += 1
+            else:
+                terrmap[p] = 'dame'
+                dame += 1
+
+    player = next_player
+    for i in range(dame):
+        if player == Player.black:
+            bpoints += 1
+        else:
+            wpoints += 1
+        player = player.other
+
+    territory = Territory( terrmap)
+    return (territory, GameResult( bpoints, wpoints, komi=0))
