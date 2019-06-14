@@ -199,21 +199,40 @@ def compute_nn_game_result_prob( labels, next_player):
     )
 
 # Turn nn output into the expected scoring format.
+# Any points close to 0.5 probability are neutral.
+# They get split evenly between b and w.
 #----------------------------------------------------
-def compute_nn_game_result( labels, next_player):
-    #-----------------------------
+def compute_nn_game_result( labels, game_state):
+    #-------------------
     def color( wprob):
         NEUTRAL_THRESH = 0.30 # 0.40 0.15
         if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
         elif wprob > 0.5: return 'w'
         else: return 'b'
 
+    # Fix terrmap such that all stones in a string are alive, dead,
+    # or neutral. Decide by simple majority vote.
+    #----------------------------------------------------------------
+    def enforce_strings( terrmap):
+        strs = game_state.board.get_go_strings()
+        for gostr in strs:
+            counts = {'territory_b':0, 'territory_w':0, 'dame':0}
+            for point in gostr.stones:
+                color = terrmap[point]
+                counts[color] += 1
+
+            truecolor = max( counts, key=counts.get)
+
+            for point in gostr.stones:
+                terrmap[point] = truecolor
+
+        colcounts = {'territory_b':0, 'territory_w':0, 'dame':0}
+        for p in terrmap: colcounts[terrmap[p]] += 1
+        return colcounts['territory_b'],colcounts['territory_w'],colcounts['dame']
+
+
     white_probs = labels[0,:]
-    TOTAL_POINTS = len(white_probs)
-    BSZ = int(round(np.sqrt(TOTAL_POINTS)))
-    dame = 0
-    wpoints = 0
-    bpoints = 0
+    BSZ = game_state.board.num_rows
     terrmap = {}
     for r in range( 1, BSZ+1):
         for c in range( 1, BSZ+1):
@@ -221,15 +240,16 @@ def compute_nn_game_result( labels, next_player):
             prob_white = white_probs[ (r-1)*BSZ + c - 1]
             if color( prob_white) == 'w':
                 terrmap[p] = 'territory_w'
-                wpoints += 1
             elif color( prob_white) == 'b':
                 terrmap[p] = 'territory_b'
-                bpoints += 1
             else:
                 terrmap[p] = 'dame'
-                dame += 1
 
-    player = next_player
+    bpoints, wpoints, dame = enforce_strings( terrmap)
+
+
+    # Split neutral points evenly between players
+    player = game_state.next_player
     for i in range(dame):
         if player == Player.black:
             bpoints += 1

@@ -17,7 +17,7 @@ from datetime import datetime
 from flask import Flask
 # A Flask extension for handling Cross Origin Resource Sharing (CORS), making cross-origin AJAX possible.
 # Without this, javascript fetch can't use this API.
-from flask_cors import CORS
+#from flask_cors import CORS
 from flask import jsonify
 from flask import request
 
@@ -33,7 +33,6 @@ def get_bot_app( bot_map):
     here = os.path.dirname( __file__)
     static_path = os.path.join( here, 'static')
     app = Flask( __name__, static_folder=static_path, static_url_path='/static')
-    CORS(app)
 
     @app.route('/select-move/<bot_name>', methods=['POST'])
     # Ask the named bot for the next move

@@ -59,7 +59,6 @@ def setup_models():
         LEELABOTMODEL = kmod.load_model( 'static/models/nn_leelabot.hd5')
         LEELABOTMODEL._make_predict_function()
 
-
 setup_models()
 smart_random_agent = SmartRandomBot()
 leelabot = LeelaBot( LEELABOTMODEL, SCOREMODEL )
@@ -96,6 +95,11 @@ def nnscore():
     feat = np.array( [ enc.encode( game_state) ] )
     lab  = SCOREMODEL.predict( [feat], batch_size=1)
 
-    territory, res = compute_nn_game_result( lab, game_state.next_player)
+    territory, res = compute_nn_game_result( lab, game_state)
     white_probs = lab[0].tolist()
     return jsonify( {'result':res, 'territory':territory.__dict__ , 'white_probs':white_probs} )
+
+#----------------------------
+if __name__ == '__main__':
+    BP()
+    app.run( host='127.0.0.1', port=2718, debug=True)
