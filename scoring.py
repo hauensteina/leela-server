@@ -203,6 +203,8 @@ def compute_nn_game_result_prob( labels, next_player):
 # They get split evenly between b and w.
 #----------------------------------------------------
 def compute_nn_game_result( labels, game_state):
+    white_probs = labels[0,:]
+    BSZ = game_state.board.num_rows
     #-------------------
     def color( wprob):
         NEUTRAL_THRESH = 0.30 # 0.40 0.15
@@ -210,18 +212,18 @@ def compute_nn_game_result( labels, game_state):
         elif wprob > 0.5: return 'w'
         else: return 'b'
 
-    # Fix terrmap such that all stones in a string are alive, dead,
-    # or neutral. Decide by simple majority vote.
+    # Fix terrmap such that all stones in a string are alive or dead.
+    # Decide by average score.
     #----------------------------------------------------------------
     def enforce_strings( terrmap):
         strs = game_state.board.get_go_strings()
         for gostr in strs:
-            counts = {'territory_b':0, 'territory_w':0, 'dame':0}
-            for point in gostr.stones:
-                color = terrmap[point]
-                counts[color] += 1
+            avg_col = 0.0
+            for idx,point in enumerate(gostr.stones):
+                prob_white = white_probs[ (point.row-1)*BSZ + point.col - 1]
+                avg_col = avg_col * (idx/(idx+1)) + prob_white / (idx+1)
 
-            truecolor = max( counts, key=counts.get)
+            truecolor = 'territory_b' if avg_col < 0.5 else 'territory_w'
 
             for point in gostr.stones:
                 terrmap[point] = truecolor
@@ -231,8 +233,6 @@ def compute_nn_game_result( labels, game_state):
         return colcounts['territory_b'],colcounts['territory_w'],colcounts['dame']
 
 
-    white_probs = labels[0,:]
-    BSZ = game_state.board.num_rows
     terrmap = {}
     for r in range( 1, BSZ+1):
         for c in range( 1, BSZ+1):
