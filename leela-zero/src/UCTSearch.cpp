@@ -455,7 +455,8 @@ bool UCTSearch::should_resign(passflag_t passflag, float besteval) {
     return true;
 }
 
-int UCTSearch::get_best_move(passflag_t passflag) {
+//--------------------------------------------------------------------
+int UCTSearch::get_best_move(passflag_t passflag, int randcount) {
     int color = m_rootstate.board.get_to_move();
 
     auto max_visits = 0;
@@ -469,7 +470,7 @@ int UCTSearch::get_best_move(passflag_t passflag) {
     // Check whether to randomize the best move proportional
     // to the playout counts, early game only.
     auto movenum = int(m_rootstate.get_movenum());
-    if (movenum < cfg_random_cnt) {
+    if (movenum < randcount) {
         m_root->randomize_first_proportionally();
     }
 
@@ -586,7 +587,7 @@ int UCTSearch::get_best_move(passflag_t passflag) {
     }
 
     return bestmove;
-}
+} // get_best_move()
 
 std::string UCTSearch::get_pv(FastState & state, UCTNode& parent) {
     if (!parent.has_children()) {
@@ -846,7 +847,9 @@ int UCTSearch::think(int color, passflag_t passflag, float ahn_randomness) {
 #endif
 #endif
 
-    int bestmove = get_best_move(passflag);
+    int randcount = cfg_random_cnt;
+    if (ahn_randomness < 0) { randcount = 0; }
+    int bestmove = get_best_move(passflag, randcount);
 
     // Save the explanation.
     m_think_output =

@@ -129,7 +129,7 @@ private:
     size_t prune_noncontenders(int color, int elapsed_centis = 0, int time_for_move = 0,
                                bool prune = true);
     bool stop_thinking(int elapsed_centis = 0, int time_for_move = 0) const;
-    int get_best_move(passflag_t passflag);
+    int get_best_move(passflag_t passflag, int randcount);
     void update_root();
     bool advance_to_new_rootstate();
     void output_analysis(FastState & state, UCTNode & parent);

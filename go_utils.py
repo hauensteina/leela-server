@@ -56,6 +56,11 @@ def coords_from_point(point):
         point.row
     )
 
+# Convert a point to a linear index
+#-----------------------------
+def p2idx(point, boardsize):
+    return (point.row-1)*boardsize + point.col - 1
+
 #==================
 class MoveAge():
     def __init__(self, board):

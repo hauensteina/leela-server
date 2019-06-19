@@ -221,6 +221,7 @@ void UCTNode::prepare_root_node(Network & network, int color,
                                 std::atomic<int>& nodes,
                                 GameState& root_state,
                                 float ahn_randomness) {
+    if (ahn_randomness < 0) { ahn_randomness = 0; }
     float root_eval;
     const auto had_children = has_children();
     if (expandable()) {
