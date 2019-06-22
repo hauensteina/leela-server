@@ -62,39 +62,41 @@ bool UCTNode::first_visit() const {
 }
 
 // Draw a slot from a pdf (an array of floats summing to 1).
-// Anything less than alpha * max gets zeroed out.
+// Anything less than PROP * max gets zeroed out.
 //----------------------------------------------------------
 int draw_slot( std::array<float,361> pdf, float alpha) {
-  // Get the probs closer together
-  auto all = std::vector<float>{};
-  for (unsigned i=0; i < pdf.size(); i++) {
-    all.push_back( pow( pdf[i], 0.33));
-  }
-  auto mmax = *std::max_element( all.begin(), all.end());
-  // Zero out the bad ones
-  float ssum = 0.0;
-  for (unsigned i=0; i < all.size(); i++) {
-    if (all[i] < mmax * alpha) {
-      all[i] = 0.0;
+    const float CUTOFF = 0.5;
+    // Get the probs closer together
+    std::cerr << "@@TEMP: " << alpha << '\n';
+    auto all = std::vector<float>{};
+    for (unsigned i=0; i < pdf.size(); i++) {
+        all.push_back( pow( pdf[i], alpha));
     }
-    else {
-      ssum += all[i];
+    auto mmax = *std::max_element( all.begin(), all.end());
+    // Zero out the bad ones
+    float ssum = 0.0;
+    for (unsigned i=0; i < all.size(); i++) {
+        if (all[i] < mmax * CUTOFF) {
+            all[i] = 0.0;
+        }
+        else {
+            ssum += all[i];
+        }
+    } // for
+    // Rescale so the sum is 1.0
+    for (unsigned i=0; i < all.size(); i++) {
+        all[i] *= 1.0 / ssum;
     }
-  } // for
-  // Rescale so the sum is 1.0
-  for (unsigned i=0; i < all.size(); i++) {
-    all[i] *= 1.0 / ssum;
-  }
-  // Draw
-  float r = rand() / (float) RAND_MAX;
-  ssum = 0.0;
-  for (unsigned i=0; i < all.size(); i++) {
-    ssum += all[i];
-    if (ssum >= r) {
-      return i;
-    }
-  } // for
-  return  all.size() - 1;
+    // Draw
+    float r = rand() / (float) RAND_MAX;
+    ssum = 0.0;
+    for (unsigned i=0; i < all.size(); i++) {
+        ssum += all[i];
+        if (ssum >= r) {
+            return i;
+        }
+    } // for
+    return  all.size() - 1;
 } // draw_slot()
 
 // Pick any slot from an array where log(arr[i]) > alpha * max.

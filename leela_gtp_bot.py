@@ -100,6 +100,8 @@ class LeelaGTPBot( Agent):
         elif 'NN eval=' in line:
             pass
             #g_win_prob = line.split('=')[1]
+        elif  '@@' in line:
+            print( line)
         elif '=' in line:
             resp = line.split('=')[1].strip()
             #print( '<== ' + resp)
@@ -171,6 +173,7 @@ class LeelaGTPBot( Agent):
         #print( '>>>>>>>>> waiting')
         success = g_response_event.wait( MOVE_TIMEOUT)
         if not success: # I guess leela died
+            print( 'error: leela response timeout')
             self._error_handler()
             return None
         #time.sleep(2)
@@ -180,6 +183,7 @@ class LeelaGTPBot( Agent):
             #print( '>>>>>>>>> cleared event')
             g_response_event.clear()
         g_response = None
+        print( 'leela says: %s' % str(res))
         return res
 
     # Override Agent.diagnostics()
