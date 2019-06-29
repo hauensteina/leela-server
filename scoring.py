@@ -10,10 +10,12 @@
 #
 
 from __future__ import absolute_import
+from pdb import set_trace as BP
 from collections import namedtuple
 from gotypes import Player, Point
+import goboard_fast
 import numpy as np
-from pdb import set_trace as BP
+
 
 #===================
 class Territory:
@@ -87,27 +89,27 @@ def evaluate_territory( board):
     for r in range( 1, board.num_rows + 1):
         for c in range( 1, board.num_cols + 1):
             p = Point(row=r, col=c)
-            if p in status:  # <1>
+            if p in status:  # <a>
                 continue
             stone = board.get(p)
-            if stone is not None:  # <2>
+            if stone is not None:  # <b>
                 status[p] = board.get(p)
             else:
                 group, neighbors = _collect_region(p, board)
-                if len(neighbors) == 1:  # <3>
+                if len(neighbors) == 1:  # <c>
                     neighbor_stone = neighbors.pop()
                     stone_str = 'b' if neighbor_stone == Player.black else 'w'
                     fill_with = 'territory_' + stone_str
                 else:
-                    fill_with = 'dame'  # <4>
+                    fill_with = 'dame'  # <d>
                 for pos in group:
                     status[pos] = fill_with
     return Territory( status)
 
-# <1> Skip the point, if you already visited this as part of a different group.
-# <2> If the point is a stone, add it as status.
-# <3> If a point is completely surrounded by black or white stones, count it as territory.
-# <4> Otherwise the point has to be a neutral point, so we add it to dame.
+# <a> Skip the point, if you already visited this as part of a different group.
+# <b> If the point is a stone, add it as status.
+# <c> If a point is completely surrounded by black or white stones, count it as territory.
+# <d> Otherwise the point has to be a neutral point, so we add it to dame.
 # end::scoring_evaluate_territory[]
 
 
@@ -149,62 +151,11 @@ def compute_game_result( game_state):
                 komi=7.5)
     )
 
-# Turn nn output into the expected scoring format.
-#----------------------------------------------------
-def compute_nn_game_result_prob( labels, next_player):
-    mid = 0.5 # Between B and W
-    #tol = 0.075 # Closer to 0.5 than tol is dame. Smaller means less dame.
-    tol = 0.30 # Closer to 0.5 than tol is dame. Smaller means less dame.
-    #tol = 0.15 # Closer to 0.5 than tol is dame. Smaller means less dame.
-    labels = labels[0,:]
-    n_isecs = len(labels)
-    boardsize = int(round(np.sqrt(n_isecs)))
-    terrmap = {}
-    bpoints = 0
-    wpoints = 0
-    dame = 0
-    ssum = 0
-    for r in range( 1, boardsize+1):
-        for c in range( 1, boardsize+1):
-            p = Point( row=r, col=c)
-            prob_white = labels[ (r-1)*boardsize + c - 1]
-            wpoints += prob_white
-            if prob_white < mid - tol:
-                terrmap[p] = 'territory_b'
-                #bpoints += 1
-            elif prob_white > mid + tol:
-                terrmap[p] = 'territory_w'
-                #wpoints += 1
-            else:
-                terrmap[p] = 'dame'
-                dame += 1
-    territory = Territory( terrmap)
-    # bpoints += int( dame / 2)
-    # wpoints += int( dame / 2)
-    wpoints = int(round(wpoints))
-    bpoints = n_isecs - wpoints
-    # if dame % 2:
-    #     if next_player == Player.white:
-    #         wpoints += 1
-    #     else:
-    #         bpoints += 1
-
-    return (territory,
-            GameResult(
-                bpoints,
-                wpoints,
-                # territory.num_black_territory,
-                # territory.num_white_territory,
-                komi=0)
-    )
-
-# Turn nn output into the expected scoring format.
-# Any points close to 0.5 probability are neutral.
-# They get split evenly between b and w.
-#----------------------------------------------------
-def compute_nn_game_result( labels, game_state):
-    white_probs = labels[0,:]
+# Transform probs (0.0 == B, 1.0 == W) into territory map
+#-----------------------------------------------------------
+def probs2terr( white_probs, game_state):
     BSZ = game_state.board.num_rows
+
     #-------------------
     def color( wprob):
         NEUTRAL_THRESH = 0.30 # 0.40 0.15
@@ -232,7 +183,6 @@ def compute_nn_game_result( labels, game_state):
         for p in terrmap: colcounts[terrmap[p]] += 1
         return colcounts['territory_b'],colcounts['territory_w'],colcounts['dame']
 
-
     terrmap = {}
     for r in range( 1, BSZ+1):
         for c in range( 1, BSZ+1):
@@ -247,7 +197,6 @@ def compute_nn_game_result( labels, game_state):
 
     bpoints, wpoints, dame = enforce_strings( terrmap)
 
-
     # Split neutral points evenly between players
     player = game_state.next_player
     for i in range(dame):
@@ -257,5 +206,81 @@ def compute_nn_game_result( labels, game_state):
             wpoints += 1
         player = player.other
 
+    return terrmap, bpoints, wpoints, dame
+
+# Some dead stones might actually be seki. Find them and fix.
+#--------------------------------------------------------------
+def fix_seki( white_probs, game_state, terrmap):
+    white_probs_out = white_probs.copy()
+    strs = game_state.board.get_go_strings()
+    for gostr in strs:
+        for p in gostr.stones: break # get any from set
+        terrcol = terrmap[p]
+        dead = (((gostr.color == Player.white) and (terrcol == 'territory_b')) or
+                  ((gostr.color == Player.black) and (terrcol == 'territory_w')))
+        if not dead: continue
+        # Kludge for bent four
+        if len(gostr.stones) < 4: continue
+
+        # Try to fill the liberties of the supposedly dead string
+        gs = game_state
+        gs.next_player = gostr.color.other
+        couldfill = True
+        seki = False
+        while( couldfill):
+            couldfill = False
+            gstr = gs.board.get_go_string( p)
+            if gstr is None: # we captured them, they were dead alright
+                break
+            # Play all moves that aren't self-atari
+            for lib in gstr.liberties:
+                move = goboard_fast.Move( lib)
+                if not gs.is_move_self_capture( gostr.color.other, move):
+                    temp = gs.apply_move( move)
+                    oppstr = temp.board.get_go_string(lib)
+                    if len(oppstr.liberties) > 1: # not self atari
+                        gs = temp # let's actually play there
+                        couldfill = True
+                    gs.next_player = gostr.color.other # reset whose turn
+
+            if couldfill: continue
+            gstr = gs.board.get_go_string( p)
+
+            # Maybe self atari is all we can do
+            if gstr is not None: # we didn't capture without self atari
+                for lib in gstr.liberties:
+                    move = goboard_fast.Move( lib)
+                    temp = gs.apply_move( move)
+                    oppstr = temp.board.get_go_string(lib)
+                    if len(oppstr.stones) > 6: # not nakade, it's a seki
+                        seki = True
+                    break
+
+        if seki:
+            myprob = 1.0 if gostr.color == Player.white else 0.0
+            # All the dead stones are alive
+            for s in gostr.stones:
+                white_probs_out[ point2idx(s)] = myprob
+            # All the liberties are neutral
+            for lib in gostr.liberties:
+                white_probs_out[ point2idx(lib)] = 0.5
+    return white_probs_out
+
+# Turn nn output into the expected scoring format.
+# Any points close to 0.5 probability are neutral.
+# They get split evenly between b and w.
+#----------------------------------------------------
+def compute_nn_game_result( labels, game_state):
+    BSZ = game_state.board.num_rows
+    white_probs = labels[0,:]
+    terrmap,_,_,_ = probs2terr( white_probs, game_state)
+    white_probs = fix_seki( white_probs, game_state, terrmap)
+    terrmap, bpoints, wpoints, dame = probs2terr( white_probs, game_state)
+
     territory = Territory( terrmap)
     return (territory, GameResult( bpoints, wpoints, komi=0))
+
+# Turn a board point into an integer index
+#--------------------------------------------
+def point2idx( point, bsz=19):
+    return bsz * (point.row - 1) + (point.col - 1)

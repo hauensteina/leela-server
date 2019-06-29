@@ -3,15 +3,15 @@ from pdb import set_trace as BP
 
 import copy
 from gotypes import Player, Point
-from scoring import compute_game_result
+import scoring 
 import zobrist
 from go_utils import MoveAge
 
-__all__ = [
-    'Board',
-    'GameState',
-    'Move',
-]
+#__all__ = [
+#    'Board',
+#    'GameState',
+#    'Move',
+#]
 
 neighbor_tables = {}
 corner_tables = {}
@@ -472,5 +472,5 @@ class GameState():
             return None
         if self.last_move.is_resign:
             return self.next_player
-        game_result = compute_game_result( self)
+        game_result = scoring.compute_game_result( self)
         return game_result.winner
