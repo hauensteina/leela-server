@@ -627,6 +627,7 @@ void GTP::execute(GameState & game, const std::string& xinput) {
 
         int who;
         float ahn_randomness = 0.0;
+        int ahn_playouts = 0;
         AnalyzeTags tags;
 
         if (analysis_output) {
@@ -649,7 +650,14 @@ void GTP::execute(GameState & game, const std::string& xinput) {
             }
             float tt;
             cmdstream >> tt;
-            if (!cmdstream.fail()) { ahn_randomness = tt; }
+            if (!cmdstream.fail()) {
+                ahn_randomness = tt;
+                cmdstream >> tt;
+                if (!cmdstream.fail()) {
+                    ahn_playouts = (int)tt;
+                    if (ahn_playouts) { search->set_playout_limit( ahn_playouts); }
+                }
+            }
         }
 
         if (analysis_output) {

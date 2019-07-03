@@ -154,6 +154,7 @@ class LeelaGTPBot( Agent):
         p = self.leela_proc
 
         randomness = config.get( 'randomness', 0.0)
+        playouts = config.get( 'playouts', 0)
 
         # Reset the game
         self._leelaCmd( 'clear_board')
@@ -166,7 +167,7 @@ class LeelaGTPBot( Agent):
 
         # Ask for new move
         self.last_move_color = color
-        cmd = 'genmove ' + color + ' ' + str(randomness)
+        cmd = 'genmove ' + color + ' ' + str(randomness) + ' ' + str(playouts)
         self._leelaCmd( cmd)
         print( 'sending ' + cmd)
         # Hang until the move comes back
