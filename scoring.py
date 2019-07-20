@@ -158,7 +158,7 @@ def probs2terr( white_probs, game_state):
 
     #-------------------
     def color( wprob):
-        NEUTRAL_THRESH = 0.30 # 0.40 0.15
+        NEUTRAL_THRESH = 0.22 # 0.30 # 0.40 0.15
         if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
         elif wprob > 0.5: return 'w'
         else: return 'b'
