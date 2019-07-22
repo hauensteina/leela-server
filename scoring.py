@@ -158,7 +158,7 @@ def probs2terr( white_probs, game_state):
 
     #-------------------
     def color( wprob):
-        NEUTRAL_THRESH = 0.22 # 0.30 # 0.40 0.15
+        NEUTRAL_THRESH = 0.4 # 0.30 # 0.40 0.15
         if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
         elif wprob > 0.5: return 'w'
         else: return 'b'
@@ -278,7 +278,7 @@ def compute_nn_game_result( labels, game_state):
     terrmap, bpoints, wpoints, dame = probs2terr( white_probs, game_state)
 
     territory = Territory( terrmap)
-    return (territory, GameResult( bpoints, wpoints, komi=0))
+    return (territory, dame, GameResult( bpoints, wpoints, komi=0))
 
 # Turn a board point into an integer index
 #--------------------------------------------

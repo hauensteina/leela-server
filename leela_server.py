@@ -95,9 +95,9 @@ def nnscore():
     feat = np.array( [ enc.encode( game_state) ] )
     lab  = SCOREMODEL.predict( [feat], batch_size=1)
 
-    territory, res = compute_nn_game_result( lab, game_state)
+    territory, dame, res = compute_nn_game_result( lab, game_state)
     white_probs = lab[0].tolist()
-    return jsonify( {'result':res, 'territory':territory.__dict__ , 'white_probs':white_probs} )
+    return jsonify( {'result':res, 'dame':dame, 'territory':territory.__dict__ , 'white_probs':white_probs} )
 
 #----------------------------
 if __name__ == '__main__':
