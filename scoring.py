@@ -13,6 +13,7 @@ from __future__ import absolute_import
 from pdb import set_trace as BP
 from collections import namedtuple
 from gotypes import Player, Point
+from agent_helpers import is_point_a_weak_eye
 import goboard_fast
 import numpy as np
 
@@ -246,24 +247,30 @@ def fix_seki( white_probs, game_state, terrmap):
             if couldfill: continue
             gstr = gs.board.get_go_string( p)
 
+            seki = True
             # Maybe self atari is all we can do
             if gstr is not None: # we didn't capture without self atari
                 for lib in gstr.liberties:
                     move = goboard_fast.Move( lib)
-                    temp = gs.apply_move( move)
-                    oppstr = temp.board.get_go_string(lib)
-                    if len(oppstr.stones) > 6: # not nakade, it's a seki
-                        seki = True
-                    break
+                    if not gs.is_move_self_capture( gostr.color.other, move): # uschmidt.sgf
+                        seki = False
+                        temp = gs.apply_move( move)
+                        oppstr = temp.board.get_go_string(lib)
+                        if len(oppstr.stones) > 6: # not nakade, it's a seki
+                            seki = True
+                        break
 
         if seki:
             myprob = 1.0 if gostr.color == Player.white else 0.0
             # All the dead stones are alive
             for s in gostr.stones:
                 white_probs_out[ point2idx(s)] = myprob
-            # All the liberties are neutral
+            # Non eye libs are neutral
             for lib in gostr.liberties:
-                white_probs_out[ point2idx(lib)] = 0.5
+                if not is_point_a_weak_eye( game_state.board, lib, gostr.color):
+                    white_probs_out[ point2idx(lib)] = 0.5
+                else:
+                    white_probs_out[ point2idx(lib)] = (1.0 if gostr.color == Player.white else 0.0)
     return white_probs_out
 
 # Turn nn output into the expected scoring format.

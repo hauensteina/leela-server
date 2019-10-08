@@ -18,9 +18,14 @@ $ cd leela-server/static/models
 $ aws s3 cp s3://ahn-uploads/leela-server-models/nn_score.hd5 .
 $ aws s3 cp s3://ahn-uploads/leela-server-models/nn_leelabot.hd5 .
  
-To start the back end leela, use something like
-
+To start the back end leela for testing, say
 gunicorn leela_server:app --bind 0.0.0.0:2718 -w 1
+
+The production port is 2719.
+
+For testing, use
+LEELA_SERVER = 'https://ahaux.com/leela_server_test/'
+in heroku_app.py . 
 
 The GUI needs to know the port. Edit leela-one-playout/static/main.js .
 You can switch between test and production at the very top.

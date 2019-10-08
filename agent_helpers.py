@@ -12,10 +12,6 @@
 from pdb import set_trace as BP
 from gotypes import Point
 
-__all__ = [
-    'is_point_an_eye',
-]
-
 #--------------------------------------------
 def is_point_an_eye(board, point, color):
     if point is None: return False
@@ -47,3 +43,14 @@ def is_point_an_eye(board, point, color):
         return off_board_corners + friendly_corners == 4
     # Point is in the middle.
     return friendly_corners >= 3
+
+#--------------------------------------------
+def is_point_a_weak_eye(board, point, color):
+    if point is None: return False
+    if board.get(point) is not None: return False
+    # All adjacent points must contain friendly stones.
+    for neighbor in board.neighbors(point):
+        neighbor_color = board.get(neighbor)
+        if neighbor_color != color:
+            return False
+    return True
