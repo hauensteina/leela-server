@@ -93,9 +93,9 @@ class LeelaGTPBot( Agent):
         global g_win_prob
         #with self.handler_lock:
         line = leela_response
-        if g_win_prob < 0 and 'V:' in line:
-            #print( '<-- ' + line)
-            right = line.split('V:')[1]
+        if g_win_prob < 0 and '(V:' in line:
+            print( '<-- ' + line)
+            right = line.split('(V:')[1]
             g_win_prob = 0.01 * float(right.split('%')[0])
         elif 'NN eval=' in line:
             pass
