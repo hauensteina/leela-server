@@ -27,9 +27,6 @@ For testing, use
 LEELA_SERVER = 'https://ahaux.com/leela_server_test/'
 in heroku_app.py . 
 
-The GUI needs to know the port. Edit leela-one-playout/static/main.js .
-You can switch between test and production at the very top.
-
 The leela-one-playout GUI expects the back end at https://ahaux.com/leela_server .
 The apache2 config on ahaux.com (marfa) forwards leela-server to port 2719:
 
