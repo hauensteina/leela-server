@@ -152,17 +152,19 @@ def compute_game_result( game_state):
                 komi=7.5)
     )
 
-# Transform probs (0.0 == B, 1.0 == W) into territory map
+#-------------------
+def color( wprob):
+    # Larger means more neutral points
+    NEUTRAL_THRESH = 0.4 # 0.30 # 0.40 0.15
+    if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
+    elif wprob > 0.5: return 'w'
+    else: return 'b'
+
+# Transform probs (0.0 == B, 1.0 == W) into territory map.
+# fix_seki() happened before getting here.
 #-----------------------------------------------------------
 def probs2terr( white_probs, game_state):
     BSZ = game_state.board.num_rows
-
-    #-------------------
-    def color( wprob):
-        NEUTRAL_THRESH = 0.4 # 0.30 # 0.40 0.15
-        if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
-        elif wprob > 0.5: return 'w'
-        else: return 'b'
 
     # Fix terrmap such that all stones in a string are alive or dead.
     # Decide by average score.
@@ -209,6 +211,58 @@ def probs2terr( white_probs, game_state):
 
     return terrmap, bpoints, wpoints, dame
 
+# An empty point with both b and w alive neighbors is neutral
+#---------------------------------------------------------------
+def fix_mixed_neighbors( white_probs, game_state, terrmap):
+    BSZ = game_state.board.num_rows
+    white_probs_out = white_probs.copy()
+    board = game_state.board
+    for col in range(0,19):
+        for row in range(0,19):
+            p = Point( row+1, col+1)
+            if board.get( p): continue
+            # It's empty
+            w = False; b = False
+            for n in board.neighbors(p):
+                ncol = board.get(n)
+                if not ncol: continue
+                terrcol = terrmap[n]
+                dead = (((ncol == Player.white) and (terrcol == 'territory_b')) or
+                        ((ncol == Player.black) and (terrcol == 'territory_w')))
+                if dead: continue
+                if ncol == Player.white: w = True
+                elif ncol == Player.black: b = True
+            if w and b:
+                white_probs_out[ row*BSZ + col] = 0.5
+    return white_probs_out
+
+# An empty point were all neighbors are alive and have the same color is territory
+#------------------------------------------------------------------------------------
+def fix_same_neighbors( white_probs, game_state, terrmap):
+    BSZ = game_state.board.num_rows
+    white_probs_out = white_probs.copy()
+    board = game_state.board
+    for col in range(0,19):
+        for row in range(0,19):
+            p = Point( row+1, col+1)
+            if board.get( p): continue
+            # It's empty
+            wcount = 0; bcount = 0; ncount = len( board.neighbors(p))
+            for n in board.neighbors(p):
+                ncol = board.get(n)
+                if not ncol: continue
+                terrcol = terrmap[n]
+                dead = (((ncol == Player.white) and (terrcol == 'territory_b')) or
+                        ((ncol == Player.black) and (terrcol == 'territory_w')))
+                if dead: continue
+                if ncol == Player.white: wcount += 1
+                elif ncol == Player.black: bcount += 1
+            if wcount == ncount:
+                white_probs_out[ row*BSZ + col] = 1.0
+            elif bcount == ncount:
+                white_probs_out[ row*BSZ + col] = 0.0
+    return white_probs_out
+
 # Some dead stones might actually be seki. Find them and fix.
 #--------------------------------------------------------------
 def fix_seki( white_probs, game_state, terrmap):
@@ -221,7 +275,7 @@ def fix_seki( white_probs, game_state, terrmap):
                   ((gostr.color == Player.black) and (terrcol == 'territory_w')))
         if not dead: continue
         # Kludge for bent four
-        if len(gostr.stones) < 4: continue
+        #if len(gostr.stones) < 4: continue
 
         # Try to fill the liberties of the supposedly dead string
         gs = game_state
@@ -282,6 +336,10 @@ def compute_nn_game_result( labels, game_state):
     white_probs = labels[0,:]
     terrmap,_,_,_ = probs2terr( white_probs, game_state)
     white_probs = fix_seki( white_probs, game_state, terrmap)
+    terrmap,_,_,_ = probs2terr( white_probs, game_state)
+    white_probs = fix_mixed_neighbors( white_probs, game_state, terrmap)
+    terrmap,_,_,_ = probs2terr( white_probs, game_state)
+    white_probs = fix_same_neighbors( white_probs, game_state, terrmap)
     terrmap, bpoints, wpoints, dame = probs2terr( white_probs, game_state)
 
     territory = Territory( terrmap)

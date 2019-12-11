@@ -101,5 +101,4 @@ def nnscore():
 
 #----------------------------
 if __name__ == '__main__':
-    BP()
     app.run( host='127.0.0.1', port=2718, debug=True)
