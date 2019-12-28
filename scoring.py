@@ -155,7 +155,7 @@ def compute_game_result( game_state):
 #-------------------
 def color( wprob):
     # Larger means more neutral points
-    NEUTRAL_THRESH = 0.4 # 0.30 # 0.40 0.15
+    NEUTRAL_THRESH = 0.30 # 0.40 0.15
     if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
     elif wprob > 0.5: return 'w'
     else: return 'b'
@@ -299,8 +299,8 @@ def fix_seki( white_probs, game_state, terrmap):
                     gs.next_player = gostr.color.other # reset whose turn
 
             if couldfill: continue
-            gstr = gs.board.get_go_string( p)
 
+            gstr = gs.board.get_go_string( p)
             seki = True
             # Maybe self atari is all we can do
             if gstr is not None: # we didn't capture without self atari
