@@ -16,6 +16,7 @@ from gotypes import Player, Point
 from agent_helpers import is_point_a_weak_eye
 import goboard_fast
 import numpy as np
+import copy
 
 
 #===================
@@ -155,7 +156,7 @@ def compute_game_result( game_state):
 #-------------------
 def color( wprob):
     # Larger means more neutral points
-    NEUTRAL_THRESH = 0.30 # 0.40 0.15
+    NEUTRAL_THRESH = 0.05 # 0.30 # 0.40 0.15
     if abs(0.5 - wprob) < NEUTRAL_THRESH: return 'n'
     elif wprob > 0.5: return 'w'
     else: return 'b'
@@ -200,8 +201,12 @@ def probs2terr( white_probs, game_state):
 
     bpoints, wpoints, dame = enforce_strings( terrmap)
 
+    print( 'black:%d' % len( [terrmap[k] for k in terrmap.keys() if terrmap[k] == 'territory_b'] ))
+    print( 'white:%d' % len( [terrmap[k] for k in terrmap.keys() if terrmap[k] == 'territory_w'] ))
+    print( 'dame:%d' % len( [terrmap[k] for k in terrmap.keys() if terrmap[k] == 'dame'] ))
     # Split neutral points evenly between players
     player = game_state.next_player
+    print( '%s to move' % ('b' if player == Player.black else 'w'))
     for i in range(dame):
         if player == Player.black:
             bpoints += 1
@@ -209,11 +214,43 @@ def probs2terr( white_probs, game_state):
             wpoints += 1
         player = player.other
 
+    print( 'bpoints:%d wpoints:%d dame:%d' % (bpoints, wpoints, dame))
+    print( 'result:%d' % (bpoints-wpoints))
     return terrmap, bpoints, wpoints, dame
+
+# Remove all stones in atari
+#----------------------------------
+def capture_ataris( game_state):
+    gs = copy.deepcopy( game_state)
+
+    # The opponent starts capturing
+    player = game_state.next_player.other
+    astrs = gs.board.strings_in_atari( player)
+    for astr in astrs:
+        for lib in astr.liberties: break
+        if gs.board.get_go_string( lib): continue
+        gs.next_player = player.other
+        mv = goboard_fast.Move( lib)
+        gs = gs.apply_move( mv)
+        print( 'captured %s' % mv)
+
+    # Now we get to capture
+    player = game_state.next_player
+    astrs = gs.board.strings_in_atari( player)
+    for astr in astrs:
+        for lib in astr.liberties: break
+        if gs.board.get_go_string( lib): continue
+        gs.next_player = player.other
+        mv = goboard_fast.Move( lib)
+        gs = gs.apply_move( mv)
+        print( 'captured %s' % mv)
+
+    return gs
 
 # An empty point with both b and w alive neighbors is neutral
 #---------------------------------------------------------------
 def fix_mixed_neighbors( white_probs, game_state, terrmap):
+    print( 'fix_mixed_neighbors()')
     BSZ = game_state.board.num_rows
     white_probs_out = white_probs.copy()
     board = game_state.board
@@ -239,6 +276,7 @@ def fix_mixed_neighbors( white_probs, game_state, terrmap):
 # An empty point were all neighbors are alive and have the same color is territory
 #------------------------------------------------------------------------------------
 def fix_same_neighbors( white_probs, game_state, terrmap):
+    print( 'fix_same_neighbors')
     BSZ = game_state.board.num_rows
     white_probs_out = white_probs.copy()
     board = game_state.board
@@ -265,17 +303,20 @@ def fix_same_neighbors( white_probs, game_state, terrmap):
 
 # Some dead stones might actually be seki. Find them and fix.
 #--------------------------------------------------------------
-def fix_seki( white_probs, game_state, terrmap):
+def fix_seki( white_probs, game_state_, terrmap):
+    print( 'fix_seki')
     white_probs_out = white_probs.copy()
+    game_state = capture_ataris( game_state_)
+    print( 'fix_seki %s to move' % ('b' if game_state_.next_player == Player.black else 'w'))
+
     strs = game_state.board.get_go_strings()
+
     for gostr in strs:
         for p in gostr.stones: break # get any from set
         terrcol = terrmap[p]
         dead = (((gostr.color == Player.white) and (terrcol == 'territory_b')) or
                   ((gostr.color == Player.black) and (terrcol == 'territory_w')))
         if not dead: continue
-        # Kludge for bent four
-        #if len(gostr.stones) < 4: continue
 
         # Try to fill the liberties of the supposedly dead string
         gs = game_state
@@ -295,8 +336,8 @@ def fix_seki( white_probs, game_state, terrmap):
                     oppstr = temp.board.get_go_string(lib)
                     if len(oppstr.liberties) > 1: # not self atari
                         gs = temp # let's actually play there
+                        gs.next_player = gostr.color.other # reset whose turn
                         couldfill = True
-                    gs.next_player = gostr.color.other # reset whose turn
 
             if couldfill: continue
 
@@ -325,6 +366,7 @@ def fix_seki( white_probs, game_state, terrmap):
                     white_probs_out[ point2idx(lib)] = 0.5
                 else:
                     white_probs_out[ point2idx(lib)] = (1.0 if gostr.color == Player.white else 0.0)
+
     return white_probs_out
 
 # Turn nn output into the expected scoring format.

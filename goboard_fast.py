@@ -3,7 +3,7 @@ from pdb import set_trace as BP
 
 import copy
 from gotypes import Player, Point
-import scoring 
+import scoring
 import zobrist
 from go_utils import MoveAge
 
@@ -391,6 +391,13 @@ class GameState():
         else:
             next_board = self.board
         return GameState(next_board, self.next_player.other, self, move)
+
+    #-------------------------------------
+    def __deepcopy__( self, memodict={}):
+        print( 'Game state deepcopy()')
+        copied = self.apply_move( Move.pass_turn())
+        copied.next_player = self.next_player
+        return copied
 
     @classmethod
     # Start a new game, no handicap

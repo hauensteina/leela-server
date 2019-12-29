@@ -23,7 +23,7 @@ import keras.models as kmod
 from keras import backend as K
 import tensorflow as tf
 
-from gotypes import Point
+from gotypes import Point, Player
 from smart_random_bot import SmartRandomBot
 from leelabot import LeelaBot
 from leela_gtp_bot import LeelaGTPBot
@@ -83,6 +83,7 @@ def nnscore():
     game_state = goboard.GameState.new_game( board_size)
     # Replay the game up to this point.
     for move in content['moves']:
+        #print( move)
         if move == 'pass':
             next_move = goboard.Move.pass_turn()
         elif move == 'resign':
@@ -91,6 +92,7 @@ def nnscore():
             next_move = goboard.Move.play( point_from_coords(move))
         game_state = game_state.apply_move( next_move)
 
+    print( 'nnscore %s to move' %  ('b' if game_state.next_player == Player.black else 'w'))
     enc  = get_encoder_by_name( 'score_threeplane_encoder', board_size)
     feat = np.array( [ enc.encode( game_state) ] )
     lab  = SCOREMODEL.predict( [feat], batch_size=1)
