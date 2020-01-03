@@ -223,24 +223,26 @@ def probs2terr( white_probs, game_state):
 def capture_ataris( game_state):
     gs = copy.deepcopy( game_state)
 
-    # The opponent starts capturing
-    player = game_state.next_player.other
-    astrs = gs.board.strings_in_atari( player)
+    # Our turn.
+    player = game_state.next_player
+    opp    = player.other
+    astrs  = gs.board.strings_in_atari( opp)
     for astr in astrs:
         for lib in astr.liberties: break
         if gs.board.get_go_string( lib): continue
-        gs.next_player = player.other
+        gs.next_player = player
         mv = goboard_fast.Move( lib)
         gs = gs.apply_move( mv)
         print( 'captured %s' % mv)
 
-    # Now we get to capture
-    player = game_state.next_player
-    astrs = gs.board.strings_in_atari( player)
+    # Now the opponent gets to capture
+    player = game_state.next_player.other
+    opp    = player.other
+    astrs  = gs.board.strings_in_atari( opp)
     for astr in astrs:
         for lib in astr.liberties: break
         if gs.board.get_go_string( lib): continue
-        gs.next_player = player.other
+        gs.next_player = player
         mv = goboard_fast.Move( lib)
         gs = gs.apply_move( mv)
         print( 'captured %s' % mv)
