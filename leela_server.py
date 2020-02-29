@@ -19,13 +19,7 @@ from io import BytesIO
 import flask
 from flask import jsonify,request,Response,send_file
 
-import keras.models as kmod
-from keras import backend as K
-import tensorflow as tf
-
 from gotypes import Point, Player
-from smart_random_bot import SmartRandomBot
-from leelabot import LeelaBot
 from leela_gtp_bot import LeelaGTPBot
 from get_bot_app import get_bot_app
 from sgf import Sgf_game
@@ -34,72 +28,11 @@ import goboard_fast as goboard
 from encoder_base import get_encoder_by_name
 from scoring import compute_nn_game_result
 
-#----------------------------
-def setup_models():
-    global SCOREMODEL
-    global LEELABOTMODEL
-
-    num_cores = 8
-    GPU = 0
-
-    if GPU:
-        pass
-    else:
-        num_CPU = 1
-        num_GPU = 0
-        config = tf.ConfigProto( intra_op_parallelism_threads=num_cores,\
-                                 inter_op_parallelism_threads=num_cores, allow_soft_placement=True,\
-                                 device_count = {'CPU' : num_CPU, 'GPU' : num_GPU})
-        session = tf.Session( config=config)
-        K.set_session( session)
-
-        #path = os.path.dirname(__file__)
-        SCOREMODEL = kmod.load_model( 'static/models/nn_score.hd5')
-        SCOREMODEL._make_predict_function()
-        LEELABOTMODEL = kmod.load_model( 'static/models/nn_leelabot.hd5')
-        LEELABOTMODEL._make_predict_function()
-
-setup_models()
-smart_random_agent = SmartRandomBot()
-leelabot = LeelaBot( LEELABOTMODEL, SCOREMODEL )
 leela_cmd = './leelaz -w best-network -t 1 -p 256 -m 25 --randomtemp 2 -r 0 --noponder '
-# leela_cmd = './leelaz -w best-network -t 1 -p 1 -r 0 --noponder '
 leela_gtp_bot = LeelaGTPBot( leela_cmd.split() )
 
 # Get an app with 'select-move/<botname>' endpoints
-app = get_bot_app( {'smartrandom':smart_random_agent, 'leelabot':leelabot, 'leela_gtp_bot':leela_gtp_bot} )
-
-
-#--------------------------------------
-# Add some more endpoints to the app
-#--------------------------------------
-
-@app.route('/nnscore', methods=['POST'])
-# Score the current position using our convolutional network
-#-------------------------------------------------------------
-def nnscore():
-    content = request.json
-    board_size = content['board_size']
-    game_state = goboard.GameState.new_game( board_size)
-    # Replay the game up to this point.
-    for move in content['moves']:
-        #print( move)
-        if move == 'pass':
-            next_move = goboard.Move.pass_turn()
-        elif move == 'resign':
-            next_move = goboard.Move.resign()
-        else:
-            next_move = goboard.Move.play( point_from_coords(move))
-        game_state = game_state.apply_move( next_move)
-
-    print( 'nnscore %s to move' %  ('b' if game_state.next_player == Player.black else 'w'))
-    enc  = get_encoder_by_name( 'score_threeplane_encoder', board_size)
-    feat = np.array( [ enc.encode( game_state) ] )
-    lab  = SCOREMODEL.predict( [feat], batch_size=1)
-
-    territory, dame, res = compute_nn_game_result( lab, game_state)
-    white_probs = lab[0].tolist()
-    return jsonify( {'result':res, 'dame':dame, 'territory':territory.__dict__ , 'white_probs':white_probs} )
+app = get_bot_app( {'leela_gtp_bot':leela_gtp_bot} )
 
 #----------------------------
 if __name__ == '__main__':
